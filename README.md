@@ -1,7 +1,6 @@
 # Streamline
 A Rust-based command-line tool designed to simplify and automate file transfers and data streaming between clients and servers on a local area network. It supports sending and receiving files, saving files to specific directories, and handling multiple files simultaneously.
 
----
 ## Installation
 
 Make sure both [Rust](https://rust-lang.org/tools/install) & Cargo (included with Rust) are installed on your system.
@@ -16,7 +15,6 @@ cargo install --path .
 
 This will compile the project and place the `streamline` executable in your Cargo bin directory, making it accessible from your command line with the command `streamline`.
 
----
 ## Usage
 
 Streamline can be used in both server and client modes. Depending on the operation, you can specify file locations, directories to save files, multiple files, and network addresses including ports.
@@ -45,14 +43,12 @@ streamline client 192.168.0.31:8080 file1.txt file2.txt [more files...]
 
 This command sends `file1.txt` and `file2.txt` to the server running at `192.168.0.31` on port `8080`. The specific address **must** be specified in this command. The source of file1.txt etc. is the location wherein the terminal is open e.g. `C:\Users\user`. If not in that location, you can pass the entire file location, e.g. `C:\Users\user\Documents\example.jpg` instead.
 
---- 
 ### Example
 
 ![server](https://github.com/user-attachments/assets/f5429e27-2187-474a-ba5d-897854751700)
 
 ![client](https://github.com/user-attachments/assets/36f88d5d-d475-4aaa-9657-0a99e8c1e8d1)
 
----
 #### Limitations
 
 - Not optimized for high-throughput scenarios.
