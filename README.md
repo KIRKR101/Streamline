@@ -1,122 +1,110 @@
 # Streamline
 
-Streamline is a simple and efficient command-line tool built with Rust for transferring files and directories over a local network. It supports both server and client modes, directory zipping for efficient transfer, progress bars, and integrity checks using SHA256 hashing.
+Resumable, bidirectional file transfer with a system-tray UI, mDNS discovery, and an address book for named peers.
+
+## What's new in v0.2
+
+* **System tray** — keep the server running quietly with a tray icon and menu (Send file..., Open output folder, Quit).
+* **Send with Streamline** — register an OS shell entry so right-click → Send just works.
+* **Address book** — `streamline pair <name> <host:port>` saves peers; `streamline client <name> ...` resolves them.
+* **mDNS discovery** — `streamline discover` lists servers on the LAN with zero config.
+* **Bidirectional transfers** — `require-accept` mode plus trusted peers, desktop notifications on incoming.
+* **Resume on disconnect** — server keeps `<name>.part` + `<name>.meta.json`; clients continue from the last offset.
+* **Multi-file queue** — persistent `~/.streamline/queue.json`; tray surface for active transfers.
+* **Refactored** — single 370-line `main.rs` split into 12 modules with a typed `AppError`, idiomatic Rust, and `clippy -D warnings` clean.
 
 ## Features
 
-*   **File and Directory Transfer:** Send individual files or entire directories. Directories are automatically zipped on-the-fly before sending.
-*   **Server and Client Modes:** Operate as a server to receive files or as a client to send files.
-*   **Configurable Chunk Size:** Optimize transfer speed by adjusting the chunk size for client transfers.
-*   **Parallel Transfers:** Send multiple files concurrently from the client to speed up transfers.
-*   **Zip Compression:** Directories are compressed into zip archives before client transfer to reduce bandwidth usage. Compression level is configurable.
-*   **Progress Bars:**  Real-time progress bars for both file transfers and directory zipping.
-*   **File Integrity Verification:** SHA256 hashing ensures file integrity during transfer.
-*   **Cross-Platform Compatibility:** Works on Windows, Linux, and macOS.
+* File and directory transfer (directories auto-zipped with configurable compression).
+* Server and client modes over plain TCP.
+* Configurable chunk size and parallel transfers.
+* SHA-256 integrity verification.
+* v1 protocol kept for back-compat; v2 adds resume + flags.
+* Cross-platform: Windows, Linux, macOS (tray + discovery on each).
 
 ## Installation
 
-Ensure you have [Rust](https://rust-lang.org/tools/install) and Cargo installed on your system.
-
-1.  Clone the Streamline repository:
-
-    ```bash
-    git clone https://github.com/KIRKR101/Streamline
-    cd Streamline
-    ```
-
-2.  Install Streamline using Cargo:
-
-    ```bash
-    cargo install --path .
-    ```
-
-    This command compiles the project and installs the `streamline` executable to your Cargo bin directory (usually `~/.cargo/bin` or `C:\Users\YourUsername\.cargo\bin`), making it available in your command line.
+```bash
+git clone https://github.com/KIRKR101/Streamline
+cd Streamline
+cargo install --path .
+```
 
 ## Usage
 
-Streamline has two main modes: `server` and `client`.
+```
+streamline <COMMAND>
 
-### Server Mode
-
-Start a server to listen for and receive incoming files:
-
-```bash
-streamline server [OPTIONS]
+Commands:
+  server          Run a server (with tray + mDNS by default)
+  client          Send files/dirs to a server
+  pair            Save a peer by name and address
+  peers           List, remove, or update trust
+  queue           Show or clear the transfer queue
+  discover        Browse for peers on the LAN
+  install         Register "Send with Streamline" in the OS shell
+  uninstall       Remove the shell entry
+  send-via-shell  Internal: invoked by the OS shell entry
 ```
 
-**Options:**
-
-*   `-s, --address <ADDRESS>`:  Specify the address and port to listen on (e.g., `0.0.0.0:8080`, `192.168.1.100:9999`, `localhost:8081`). Default is `0.0.0.0:8080` (listening on all interfaces).
-*   `-o, --output-path <PATH>`:  Specify the directory to save received files. If not specified, files are saved to the current working directory.
-
-**Examples:**
-
-*   Start a server listening on all interfaces at port `8080`, saving files to `/path/to/receive/directory`:
-
-    ```bash
-    streamline server --address 0.0.0.0:8080 --output-path /path/to/receive/directory
-    ```
-
-*   Start a server listening on IP `192.168.1.105` at port `9999`, saving files to the current directory:
-
-    ```bash
-    streamline server --address 192.168.1.105:9999
-    ```
-
-*   Start a server with default address and output path:
-
-    ```bash
-    streamline server
-    ```
-
-### Client Mode
-
-Send files and directories to a Streamline server:
+### Server
 
 ```bash
-streamline client <ADDRESS> [OPTIONS] <FILE_PATH> [FILE_PATH]...
+streamline server -s 0.0.0.0:8080 -o ./received
+streamline server --require-accept            # prompt for each incoming transfer
+streamline server --no-advertise              # disable mDNS
 ```
 
-**Arguments:**
+The server runs in the foreground and shows a tray icon. Quit via the tray menu or Ctrl-C.
 
-*   `<ADDRESS>`: The address and port of the server to send files to (e.g., `192.168.1.105:8080`).
-*   `<FILE_PATH> [FILE_PATH]...`: One or more file or directory paths to send.
+### Client
 
-**Options:**
+```bash
+streamline client 192.168.1.105:8080 file.txt dir/
+streamline client my-laptop file.txt           # by saved peer name
+streamline client 192.168.1.105:8080 -c 2 -p 8 -z 9 file.txt
+```
 
-*   `-c, --chunk-size-mb <SIZE>`:  Set the chunk size in MB for file transfer (default: `1MB`).
-*   `-p, --parallel-transfers <COUNT>`: Set the maximum number of files to transfer in parallel (default: `5`).
-*   `-z, --zip-compression-level <LEVEL>`: Set the zip compression level (0-9) for directories (default: `6`). `0` is no compression (faster), `9` is maximum compression (smaller size, slower).
+### Pairing
 
-**Examples:**
+```bash
+streamline pair my-laptop 192.168.1.10:8080 --trust
+streamline peers list
+streamline peers trust my-laptop              # mark trusted (auto-accept)
+streamline peers remove my-laptop
+```
 
-*   Send `file1.txt` and `directory1` to a server at `192.168.1.105:8080` with default options:
+### Discovery
 
-    ```bash
-    streamline client 192.168.1.105:8080 file1.txt directory1
-    ```
+```bash
+streamline discover --timeout 5
+# my-laptop._streamline._tcp.local. -> 192.168.1.10:8080
+```
 
-*   Send `file1.txt` and `directory2` to a server at `127.0.0.1:8080` with a 2MB chunk size and maximum zip compression:
+### Shell integration
 
-    ```bash
-    streamline client 127.0.0.1:8080 -c 2 -z 9 file1.txt directory2
-    ```
+```bash
+streamline install --peer my-laptop
+# right-click any file -> "Send with Streamline"
+streamline uninstall
+```
 
-*   Send `file1.txt` and `another_file.mp4` to a server at `localhost:9000` with 3 parallel transfers:
+The server address book and config live in `~/.streamline/` (or `%APPDATA%\Streamline\Streamline\` on Windows).
 
-    ```bash
-    streamline client localhost:9000 -p 3 file1.txt another_file.mp4
-    ```
+## Protocol
 
-### Example
+v2 framed binary protocol (v1 is also accepted):
 
-![server](https://github.com/user-attachments/assets/f5429e27-2187-474a-ba5d-897854751700)
-![client](https://github.com/user-attachments/assets/36f88d5d-d475-4aaa-9657-0a99e8c1e8d1)
+```
+[1B version=2][4B name_len][name][8B total_size][8B resume_offset]
+[1B flags: zip|resume|directory][payload...][32B sha256]
+```
 
-### Limitations
+After the client sends the header, the server replies with `[1B accept/decline][8B resume_offset]`. `RESUME_RESET` (u64::MAX) tells the client to start from the beginning.
 
-*   Not optimized for extremely high-throughput environments.
-*   Designed for simple TCP-based transfers, not for complex file-sharing scenarios.
-*   Lacks built-in encryption and advanced security features. Use in trusted networks or with additional security measures.
+## Limitations
 
-Streamline has been tested on Windows and Linux, including file transfers between them, and is expected to work on macOS as well.
+* No TLS / auth — use on a trusted network.
+* mDNS / tray require the `discovery` and `tray` features (on by default).
+* Resume is per-target filename; renaming a partial file on the receiver breaks resume.
+* macOS shell integration is unimplemented (use the tray or CLI for now).
