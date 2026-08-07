@@ -1,18 +1,6 @@
 # Streamline
 
 Resumable, bidirectional file transfer with a system-tray UI, mDNS discovery, and an address book for named peers.
-
-## What's new in v0.2
-
-* **System tray** — keep the server running quietly with a tray icon and menu (Send file..., Open output folder, Quit).
-* **Send with Streamline** — register an OS shell entry so right-click → Send just works.
-* **Address book** — `streamline pair <name> <host:port>` saves peers; `streamline client <name> ...` resolves them.
-* **mDNS discovery** — `streamline discover` lists servers on the LAN with zero config.
-* **Bidirectional transfers** — `require-accept` mode plus trusted peers, desktop notifications on incoming.
-* **Resume on disconnect** — server keeps `<name>.part` + `<name>.meta.json`; clients continue from the last offset.
-* **Multi-file queue** — persistent `~/.streamline/queue.json`; tray surface for active transfers.
-* **Refactored** — single 370-line `main.rs` split into 12 modules with a typed `AppError`, idiomatic Rust, and `clippy -D warnings` clean.
-
 ## Features
 
 * File and directory transfer (directories auto-zipped with configurable compression).
@@ -21,6 +9,13 @@ Resumable, bidirectional file transfer with a system-tray UI, mDNS discovery, an
 * SHA-256 integrity verification.
 * v1 protocol kept for back-compat; v2 adds resume + flags.
 * Cross-platform: Windows, Linux, macOS (tray + discovery on each).
+* Keep the server running quietly with a tray icon and menu (Send file..., Open output folder, Quit).
+* Register an OS shell entry so right-click → Send works.
+* `streamline pair <name> <host:port>` saves peers; `streamline client <name> ...` resolves them.
+* `streamline discover` lists servers on the LAN with zero config.
+* `require-accept` mode plus trusted peers, desktop notifications on incoming.
+* Resumable downloads, `<name>.part` + `<name>.meta.json`; clients continue from the last offset.
+* Persistent multi-file queue `~/.streamline/queue.json`; tray surface for active transfers.
 
 ## Installation
 
